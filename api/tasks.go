@@ -220,6 +220,43 @@ func (e *EphemeralDisk) Canonicalize() {
 	}
 }
 
+// MigrateStrategy describes how allocations for a task group should be
+// migrated between nodes (eg when draining).
+type MigrateStrategy struct {
+	MaxParallel     *int           `mapstructure:"max_parallel"`
+	HealthCheck     *string        `mapstructure:"health_check"`
+	MinHealthyTime  *time.Duration `mapstructure:"min_healthy_time"`
+	HealthyDeadline *time.Duration `mapstructure:"healthy_deadline"`
+}
+
+func DefaultMigrateStrategy() *MigrateStrategy {
+	return &MigrateStrategy{
+		MaxParallel:     helper.IntToPtr(1),
+		HealthCheck:     helper.StringToPtr("checks"),
+		MinHealthyTime:  helper.TimeToPtr(10 * time.Second),
+		HealthyDeadline: helper.TimeToPtr(5 * time.Minute),
+	}
+}
+
+func (m *MigrateStrategy) Canonicalize() {
+	if m == nil {
+		return
+	}
+	defaults := DefaultMigrateStrategy()
+	if m.MaxParallel == nil {
+		m.MaxParallel = defaults.MaxParallel
+	}
+	if m.HealthCheck == nil {
+		m.HealthCheck = defaults.HealthCheck
+	}
+	if m.MinHealthyTime == nil {
+		m.MinHealthyTime = defaults.MinHealthyTime
+	}
+	if m.HealthyDeadline == nil {
+		m.HealthyDeadline = defaults.HealthyDeadline
+	}
+}
+
 // TaskGroup is the unit of scheduling.
 type TaskGroup struct {
 	Name          *string
@@ -229,6 +266,7 @@ type TaskGroup struct {
 	RestartPolicy *RestartPolicy
 	EphemeralDisk *EphemeralDisk
 	Update        *UpdateStrategy
+	Migrate       *MigrationStrategy
 	Meta          map[string]string
 }
 
@@ -271,6 +309,8 @@ func (g *TaskGroup) Canonicalize(job *Job) {
 	if g.Update != nil {
 		g.Update.Canonicalize()
 	}
+
+	g.Migrate.Canonicalize()
 
 	var defaultRestartPolicy *RestartPolicy
 	switch *job.Type {
