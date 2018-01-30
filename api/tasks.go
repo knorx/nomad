@@ -266,7 +266,7 @@ type TaskGroup struct {
 	RestartPolicy *RestartPolicy
 	EphemeralDisk *EphemeralDisk
 	Update        *UpdateStrategy
-	Migrate       *MigrationStrategy
+	Migrate       *MigrateStrategy
 	Meta          map[string]string
 }
 
